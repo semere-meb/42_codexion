@@ -11,25 +11,93 @@
 /* ************************************************************************** */
 
 #include "codexion.h"
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+void	compile_op(t_data *data)
+{
+	struct timeval	now;
+	int				diff;
+
+	gettimeofday(&now, NULL);
+	diff = (now.tv_sec - data->start.tv_sec) * 1000L + (now.tv_usec
+			- data->start.tv_usec) / 1000;
+	printf("%d %d is compiling\n", diff, data->coder_id);
+	usleep(data->args.time_to_compile * 1000L);
+}
+
+void	debug_op(t_data *data)
+{
+	struct timeval	now;
+	int				diff;
+
+	gettimeofday(&now, NULL);
+	diff = (now.tv_sec - data->start.tv_sec) * 1000L + (now.tv_usec
+			- data->start.tv_usec) / 1000;
+	printf("%d %d is debugging\n", diff, data->coder_id);
+	usleep(data->args.time_to_debug * 1000L);
+}
+
+void	refactor_op(t_data *data)
+{
+	struct timeval	now;
+	int				diff;
+
+	gettimeofday(&now, NULL);
+	diff = (now.tv_sec - data->start.tv_sec) * 1000L + (now.tv_usec
+			- data->start.tv_usec) / 1000;
+	printf("%d %d is refactoring\n", diff, data->coder_id);
+	usleep(data->args.time_to_refactor * 1000L);
+}
+
+void	*run(void *param)
+{
+	int		i;
+	t_data	*data;
+
+	data = param;
+	i = 0;
+	while (i < 5)
+	{
+		compile_op(data);
+		debug_op(data);
+		refactor_op(data);
+		i++;
+	}
+	return (NULL);
+}
 
 int	main(int argc, char **argv)
 {
-	t_data	*data;
+	t_args			*args;
+	pthread_t		*coders;
+	pthread_mutex_t	*dongles;
+	int				i;
+	struct timeval	start;
+	t_data			*data;
 
-	data = parse_arguments(argc - 1, &argv[1]);
-	if (!data)
-		return (0);
-	printf("d = [%d]\n", data->number_of_coders);
-	printf("d = [%d]\n", data->time_to_burnout);
-	printf("d = [%d]\n", data->time_to_compile);
-	printf("d = [%d]\n", data->time_to_debug);
-	printf("d = [%d]\n", data->time_to_refactor);
-	printf("d = [%d]\n", data->number_of_compiles_required);
-	printf("d = [%d]\n", data->dongle_cooldown);
-	printf("d = [%d]\n", data->scheduler);
-	if (data)
-		free(data);
-	data = NULL;
+	args = parse_arguments(argc - 1, &argv[1]);
+	coders = malloc(sizeof(pthread_t) * args->number_of_coders);
+	dongles = malloc(sizeof(pthread_mutex_t) * args->number_of_coders);
+	data = malloc(sizeof(t_data) * args->number_of_coders);
+	i = 0;
+	gettimeofday(&start, NULL);
+	while (i < args->number_of_coders)
+	{
+		data[i].args = *args;
+		data[i].coder_id = i + 1;
+		data[i].start = start;
+		pthread_create(&coders[i], NULL, run, (void *)&data[i]);
+		pthread_mutex_init(&dongles[i], NULL);
+		i++;
+	}
+	i = 0;
+	while (i < args->number_of_coders)
+	{
+		pthread_join(coders[i], NULL);
+		i++;
+	}
 }

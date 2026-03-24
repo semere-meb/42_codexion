@@ -26,15 +26,15 @@ int	isnumeric(char *str)
 	return (1);
 }
 
-t_data	*parse_arguments(int count, char **args)
+t_args	*parse_arguments(int count, char **args)
 {
 	int		args_int[8];
-	t_data	*data;
+	t_args	*data;
 	int		i;
 
 	if (count != 8)
 		return (NULL);
-	data = malloc(sizeof(t_data));
+	data = malloc(sizeof(t_args));
 	if (!data)
 		return (NULL);
 	i = -1;
