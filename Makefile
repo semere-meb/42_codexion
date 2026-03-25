@@ -7,6 +7,7 @@ OBJS = $(SRCS:.c=.o)
 
 CC = cc
 CFLAGS = -Wall -Wextra -Werror -pthread
+# CFLAGS = -Wall -Wextra -Werror -pthread -g -fsanitize=thread
 
 all: $(NAME)
 
@@ -24,8 +25,15 @@ $(NAME): $(OBJS)
 # number_of_compiles_required
 # dongle_cooldown
 # scheduler
+
 test: $(NAME)
-	./$(NAME) 10 2000 500 200 300 5 50 1
+	./$(NAME) 2 800 200 100 10 5 0 edf
+
+test-val: $(NAME)
+	valgrind --leak-check=full --show-leak-kinds=all ./$(NAME) 2 800 200 100 10 5 0 edf
+	
+test-hel: $(NAME)
+	valgrind --tool=helgrind ./$(NAME) 2 800 200 100 10 5 0 edf
 
 clean:
 	rm -f $(OBJS)

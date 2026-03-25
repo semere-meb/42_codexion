@@ -24,17 +24,37 @@ typedef struct s_args
 	int				time_to_refactor;
 	int				number_of_compiles_required;
 	int				dongle_cooldown;
-	int				scheduler;
+	char			*scheduler;
 }					t_args;
 
-typedef struct s_data
+typedef struct s_dongle
 {
-	struct timeval	start;
+	pthread_mutex_t	lock;
+	long			last_used;
+}					t_dongle;
+
+typedef struct s_coder
+{
 	int				coder_id;
+	pthread_t		thread;
+	t_dongle		*right_dongle;
+	t_dongle		*left_dongle;
+	long			last_compile;
+	int				compiles_done;
+	void			*state;
+}					t_coder;
+
+typedef struct s_state
+{
 	t_args			args;
-	pthread_mutex_t	*left_dongle;
-	pthread_mutex_t	*right_dongle;
-}					t_data;
+	t_coder			*coders;
+	t_dongle		*dongles;
+	long			start;
+	int				is_over;
+	pthread_mutex_t	over_mutex;
+	pthread_mutex_t	print_mutex;
+	pthread_t		monitor;
+}					t_state;
 
 t_args				*parse_arguments(int count, char **args);
 

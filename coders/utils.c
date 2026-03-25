@@ -12,6 +12,7 @@
 
 #include "codexion.h"
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -28,22 +29,27 @@ int	isnumeric(char *str)
 
 t_args	*parse_arguments(int count, char **args)
 {
-	int		args_int[8];
+	int		args_int[7];
 	t_args	*data;
 	int		i;
 
-	if (count != 8)
+	if (count != 8 || !(!strcmp(args[7], "fifo") || (!strcmp(args[7], "edf"))))
 		return (NULL);
 	data = malloc(sizeof(t_args));
 	if (!data)
 		return (NULL);
-	i = -1;
-	while (++i < 8)
+	i = 0;
+	while (i < 7)
 	{
 		if (!isnumeric(args[i]))
 			return (NULL);
 		args_int[i] = atoi(args[i]);
+		i++;
 	}
+	if (!strcmp(args[7], "fifo"))
+		data->scheduler = "fifo";
+	else if (!strcmp(args[7], "edf"))
+		data->scheduler = "edf";
 	data->number_of_coders = args_int[0];
 	data->time_to_burnout = args_int[1];
 	data->time_to_compile = args_int[2];
@@ -51,6 +57,5 @@ t_args	*parse_arguments(int count, char **args)
 	data->time_to_refactor = args_int[4];
 	data->number_of_compiles_required = args_int[5];
 	data->dongle_cooldown = args_int[6];
-	data->scheduler = args_int[7];
 	return (data);
 }
