@@ -33,6 +33,16 @@ void	print(char *str, t_state *state, int coder_idx)
 	pthread_mutex_unlock(&state->print_mutex);
 }
 
+bool	is_over(t_state *state)
+{
+	bool	is_over;
+
+	pthread_mutex_lock(&state->over_mutex);
+	is_over = state->is_over;
+	pthread_mutex_unlock(&state->over_mutex);
+	return (is_over);
+}
+
 void	compile_op(t_coder *coder, t_state *state)
 {
 	t_dongle	*first;
@@ -54,7 +64,9 @@ void	compile_op(t_coder *coder, t_state *state)
 	pthread_mutex_lock(&second->lock);
 	second->last_used = now();
 	print("%ld %d has taken a dongle\n", state, coder->idx);
+	pthread_mutex_lock(&coder->last_mutex);
 	coder->last_compile = now();
+	pthread_mutex_unlock(&coder->last_mutex);
 	print("%ld %d is compiling\n", state, coder->idx);
 	usleep(state->args.time_to_compile * 1000L);
 	pthread_mutex_unlock(&first->lock);
@@ -85,8 +97,14 @@ void	*run(void *param)
 	i = 0;
 	while (i < state->args.number_of_compiles_required)
 	{
+		if (is_over(state))
+			return (NULL);
 		compile_op(coder, state);
+		if (is_over(state))
+			return (NULL);
 		debug_op(coder, state);
+		if (is_over(state))
+			return (NULL);
 		refactor_op(coder, state);
 		i++;
 	}
@@ -95,7 +113,30 @@ void	*run(void *param)
 
 void	*monitor(void *param)
 {
-	(void)param;
+	t_state	*state;
+	int		i;
+	long	last;
+
+	state = param;
+	while (!is_over(state))
+	{
+		usleep(1000);
+		i = -1;
+		while (++i < state->args.number_of_coders)
+		{
+			pthread_mutex_lock(&state->coders[i].last_mutex);
+			last = state->coders[i].last_compile;
+			pthread_mutex_unlock(&state->coders[i].last_mutex);
+			if (now() - last >= state->args.time_to_burnout)
+			{
+				pthread_mutex_lock(&state->over_mutex);
+				state->is_over = true;
+				pthread_mutex_unlock(&state->over_mutex);
+				print("%ld %d has burned out\n", state, state->coders[i].idx);
+				return (NULL);
+			}
+		}
+	}
 	return (NULL);
 }
 
@@ -158,6 +199,7 @@ t_coder	*init_coders(t_args *args, t_state *state)
 		coders[i].right_dongle = &state->dongles[(i + 1)
 			% args->number_of_coders];
 		coders[i].state = state;
+		pthread_mutex_init(&coders[i].last_mutex, NULL);
 	}
 	return (coders);
 }

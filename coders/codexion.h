@@ -49,6 +49,7 @@ typedef struct s_coder
 	long				last_compile;
 	int					compiles_done;
 	t_state				*state;
+	pthread_mutex_t		last_mutex;
 }						t_coder;
 
 typedef struct s_state
