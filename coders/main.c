@@ -27,16 +27,27 @@ long	now(void)
 
 void	compile_op(t_coder *coder, t_state *state)
 {
-	// acquire right dongle
-	pthread_mutex_lock(&coder->left_dongle->lock);
-	coder->left_dongle->last_used = now();
+	t_dongle *first, *second;
+	if (coder->right_dongle->index < coder->left_dongle->index)
+	{
+		first = coder->left_dongle;
+		second = coder->right_dongle;
+	}
+	else
+	{
+		first = coder->right_dongle;
+		second = coder->left_dongle;
+	}
+	// acquire first dongle
+	pthread_mutex_lock(&first->lock);
+	first->last_used = now();
 	pthread_mutex_lock(&state->print_mutex);
 	printf("%ld %d has taken a dongle\n", now() - state->start,
 		coder->coder_id);
 	pthread_mutex_unlock(&state->print_mutex);
-	// acquire right dongle
-	pthread_mutex_lock(&coder->right_dongle->lock);
-	coder->right_dongle->last_used = now();
+	// acquire second dongle
+	pthread_mutex_lock(&second->lock);
+	second->last_used = now();
 	pthread_mutex_lock(&state->print_mutex);
 	printf("%ld %d has taken a dongle\n", now() - state->start,
 		coder->coder_id);
@@ -46,8 +57,9 @@ void	compile_op(t_coder *coder, t_state *state)
 	printf("%ld %d is compiling\n", now() - state->start, coder->coder_id);
 	pthread_mutex_unlock(&state->print_mutex);
 	usleep(state->args.time_to_compile * 1000L);
-	pthread_mutex_unlock(&coder->left_dongle->lock);
-	pthread_mutex_unlock(&coder->right_dongle->lock);
+	// release dongles
+	pthread_mutex_unlock(&first->lock);
+	pthread_mutex_unlock(&second->lock);
 	coder->compiles_done += 1;
 }
 
@@ -74,7 +86,7 @@ void	*run(void *param)
 	int		i;
 
 	coder = param;
-	state = (t_state *)(coder->state);
+	state = coder->state;
 	i = 0;
 	while (i < state->args.number_of_compiles_required)
 	{
@@ -128,6 +140,7 @@ int	main(int argc, char **argv)
 	i = 0;
 	while (i < args->number_of_coders)
 	{
+		dongles[i].index = i;
 		pthread_mutex_init(&dongles[i].lock, NULL);
 		dongles[i].last_used = state.start - args->dongle_cooldown;
 		i++;
