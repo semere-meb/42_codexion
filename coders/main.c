@@ -64,14 +64,14 @@ void	compile_op(t_coder *coder, t_state *state)
 	pthread_mutex_lock(&second->lock);
 	second->last_used = now();
 	print("%ld %d has taken a dongle\n", state, coder->idx);
-	pthread_mutex_lock(&coder->last_mutex);
+	pthread_mutex_lock(&coder->info_mutex);
 	coder->last_compile = now();
-	pthread_mutex_unlock(&coder->last_mutex);
+	coder->compiles_done += 1;
+	pthread_mutex_unlock(&coder->info_mutex);
 	print("%ld %d is compiling\n", state, coder->idx);
 	usleep(state->args.time_to_compile * 1000L);
 	pthread_mutex_unlock(&first->lock);
 	pthread_mutex_unlock(&second->lock);
-	coder->compiles_done += 1;
 }
 
 void	debug_op(t_coder *coder, t_state *state)
@@ -116,17 +116,20 @@ void	*monitor(void *param)
 	t_state	*state;
 	int		i;
 	long	last;
+	int		compiles_done;
 
 	state = param;
-	while (!is_over(state))
+	compiles_done = 0;
+	while (compiles_done < state->args.number_of_compiles_required
+		&& !is_over(state))
 	{
 		usleep(1000);
 		i = -1;
 		while (++i < state->args.number_of_coders)
 		{
-			pthread_mutex_lock(&state->coders[i].last_mutex);
+			pthread_mutex_lock(&state->coders[i].info_mutex);
 			last = state->coders[i].last_compile;
-			pthread_mutex_unlock(&state->coders[i].last_mutex);
+			pthread_mutex_unlock(&state->coders[i].info_mutex);
 			if (now() - last >= state->args.time_to_burnout)
 			{
 				pthread_mutex_lock(&state->over_mutex);
@@ -136,6 +139,9 @@ void	*monitor(void *param)
 				return (NULL);
 			}
 		}
+		pthread_mutex_lock(&state->coders[i - 1].info_mutex);
+		compiles_done = state->coders[i - 1].compiles_done;
+		pthread_mutex_unlock(&state->coders[i - 1].info_mutex);
 	}
 	return (NULL);
 }
@@ -199,7 +205,7 @@ t_coder	*init_coders(t_args *args, t_state *state)
 		coders[i].right_dongle = &state->dongles[(i + 1)
 			% args->number_of_coders];
 		coders[i].state = state;
-		pthread_mutex_init(&coders[i].last_mutex, NULL);
+		pthread_mutex_init(&coders[i].info_mutex, NULL);
 	}
 	return (coders);
 }

@@ -8,6 +8,7 @@ OBJS = $(SRCS:.c=.o)
 CC = cc
 # CFLAGS = -Wall -Wextra -Werror -pthread -g
 CFLAGS = -Wall -Wextra -Werror -pthread -g -fsanitize=thread
+ARGS = 2 800 200 100 10 3 0 edf
 
 all: $(NAME)
 
@@ -27,13 +28,13 @@ $(NAME): $(OBJS)
 # scheduler
 
 test: $(NAME)
-	./$(NAME) 2 800 200 100 10 3 0 edf
+	./$(NAME) $(ARGS)
 
 test-val: $(NAME)
-	valgrind --leak-check=full --show-leak-kinds=all ./$(NAME) 2 800 200 100 10 5 0 edf
+	valgrind --leak-check=full --show-leak-kinds=all ./$(NAME) $(ARGS)
 	
 test-hel: $(NAME)
-	valgrind --tool=helgrind ./$(NAME) 2 800 200 100 10 5 0 edf
+	valgrind --tool=helgrind ./$(NAME) $(ARGS)
 
 clean:
 	rm -f $(OBJS)
