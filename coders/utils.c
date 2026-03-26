@@ -38,18 +38,14 @@ t_args	*parse_arguments(int count, char **args)
 	data = malloc(sizeof(t_args));
 	if (!data)
 		return (NULL);
-	i = 0;
-	while (i < 7)
+	i = -1;
+	while (++i < 7)
 	{
 		if (!isnumeric(args[i]))
 			return (NULL);
 		args_int[i] = atoi(args[i]);
-		i++;
 	}
-	if (!strcmp(args[7], "fifo"))
-		data->scheduler = "fifo";
-	else if (!strcmp(args[7], "edf"))
-		data->scheduler = "edf";
+	data->scheduler = args[7];
 	data->number_of_coders = args_int[0];
 	data->time_to_burnout = args_int[1];
 	data->time_to_compile = args_int[2];

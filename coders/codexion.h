@@ -13,6 +13,7 @@
 #ifndef CODEXION_H
 # define CODEXION_H
 # include <pthread.h>
+# include <stdbool.h>
 # include <sys/time.h>
 
 typedef struct s_state	t_state;
@@ -34,14 +35,14 @@ typedef struct s_args
 
 typedef struct s_dongle
 {
-	int					index;
+	int					idx;
 	pthread_mutex_t		lock;
 	long				last_used;
 }						t_dongle;
 
 typedef struct s_coder
 {
-	int					coder_id;
+	int					idx;
 	pthread_t			thread;
 	t_dongle			*right_dongle;
 	t_dongle			*left_dongle;
@@ -56,7 +57,7 @@ typedef struct s_state
 	t_coder				*coders;
 	t_dongle			*dongles;
 	long				start;
-	int					is_over;
+	bool				is_over;
 	pthread_mutex_t		over_mutex;
 	pthread_mutex_t		print_mutex;
 	pthread_t			monitor;

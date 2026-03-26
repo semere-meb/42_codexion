@@ -12,6 +12,7 @@
 
 #include "codexion.h"
 #include <pthread.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -25,10 +26,19 @@ long	now(void)
 	return (current.tv_sec * 1000L + current.tv_usec / 1000);
 }
 
+void	print(char *str, t_state *state, int coder_idx)
+{
+	pthread_mutex_lock(&state->print_mutex);
+	printf(str, now() - state->start, coder_idx + 1);
+	pthread_mutex_unlock(&state->print_mutex);
+}
+
 void	compile_op(t_coder *coder, t_state *state)
 {
-	t_dongle *first, *second;
-	if (coder->right_dongle->index < coder->left_dongle->index)
+	t_dongle	*first;
+	t_dongle	*second;
+
+	if (coder->right_dongle->idx < coder->left_dongle->idx)
 	{
 		first = coder->left_dongle;
 		second = coder->right_dongle;
@@ -38,26 +48,15 @@ void	compile_op(t_coder *coder, t_state *state)
 		first = coder->right_dongle;
 		second = coder->left_dongle;
 	}
-	// acquire first dongle
 	pthread_mutex_lock(&first->lock);
 	first->last_used = now();
-	pthread_mutex_lock(&state->print_mutex);
-	printf("%ld %d has taken a dongle\n", now() - state->start,
-		coder->coder_id);
-	pthread_mutex_unlock(&state->print_mutex);
-	// acquire second dongle
+	print("%ld %d has taken a dongle\n", state, coder->idx);
 	pthread_mutex_lock(&second->lock);
 	second->last_used = now();
-	pthread_mutex_lock(&state->print_mutex);
-	printf("%ld %d has taken a dongle\n", now() - state->start,
-		coder->coder_id);
-	pthread_mutex_unlock(&state->print_mutex);
+	print("%ld %d has taken a dongle\n", state, coder->idx);
 	coder->last_compile = now();
-	pthread_mutex_lock(&state->print_mutex);
-	printf("%ld %d is compiling\n", now() - state->start, coder->coder_id);
-	pthread_mutex_unlock(&state->print_mutex);
+	print("%ld %d is compiling\n", state, coder->idx);
 	usleep(state->args.time_to_compile * 1000L);
-	// release dongles
 	pthread_mutex_unlock(&first->lock);
 	pthread_mutex_unlock(&second->lock);
 	coder->compiles_done += 1;
@@ -65,17 +64,13 @@ void	compile_op(t_coder *coder, t_state *state)
 
 void	debug_op(t_coder *coder, t_state *state)
 {
-	pthread_mutex_lock(&state->print_mutex);
-	printf("%ld %d is debugging\n", now() - state->start, coder->coder_id);
-	pthread_mutex_unlock(&state->print_mutex);
+	print("%ld %d is debugging\n", state, coder->idx);
 	usleep(state->args.time_to_debug * 1000L);
 }
 
 void	refactor_op(t_coder *coder, t_state *state)
 {
-	pthread_mutex_lock(&state->print_mutex);
-	printf("%ld %d is refactoring\n", now() - state->start, coder->coder_id);
-	pthread_mutex_unlock(&state->print_mutex);
+	print("%ld %d is refactoring\n", state, coder->idx);
 	usleep(state->args.time_to_refactor * 1000L);
 }
 
@@ -115,55 +110,79 @@ int	cleanup(t_args *args, t_coder *coders, t_dongle *dongles)
 	return (0);
 }
 
-int	main(int argc, char **argv)
+t_state	init_state(t_args *args)
+{
+	t_state	state;
+
+	state.start = now();
+	state.args = *args;
+	state.is_over = false;
+	pthread_mutex_init(&state.print_mutex, NULL);
+	pthread_mutex_init(&state.over_mutex, NULL);
+	return (state);
+}
+
+t_dongle	*init_dongles(t_args *args, t_state *state)
 {
 	int			i;
-	t_args		*args;
-	t_coder		*coders;
 	t_dongle	*dongles;
-	t_state		state;
+
+	dongles = malloc(sizeof(t_dongle) * args->number_of_coders);
+	if (!dongles)
+		return (NULL);
+	i = -1;
+	while (++i < args->number_of_coders)
+	{
+		dongles[i].idx = i;
+		pthread_mutex_init(&dongles[i].lock, NULL);
+		dongles[i].last_used = state->start - args->dongle_cooldown;
+	}
+	return (dongles);
+}
+
+t_coder	*init_coders(t_args *args, t_state *state)
+{
+	t_coder	*coders;
+	int		i;
+
+	coders = malloc(sizeof(t_coder) * args->number_of_coders);
+	if (!coders)
+		return (NULL);
+	i = -1;
+	while (++i < args->number_of_coders)
+	{
+		coders[i].idx = i;
+		coders[i].compiles_done = 0;
+		coders[i].last_compile = state->start;
+		coders[i].left_dongle = &state->dongles[i];
+		coders[i].right_dongle = &state->dongles[(i + 1)
+			% args->number_of_coders];
+		coders[i].state = state;
+	}
+	return (coders);
+}
+
+int	main(int argc, char **argv)
+{
+	int		i;
+	t_args	*args;
+	t_state	state;
 
 	args = parse_arguments(argc - 1, &argv[1]);
 	if (!args)
 		return (cleanup(args, NULL, NULL));
-	coders = malloc(sizeof(t_coder) * args->number_of_coders);
-	dongles = malloc(sizeof(t_dongle) * args->number_of_coders);
-	if (!coders || !dongles)
-		return (cleanup(args, coders, dongles));
-	state.start = now();
-	state.args = *args;
-	state.is_over = 0;
-	state.coders = coders;
-	state.dongles = dongles;
-	pthread_mutex_init(&state.print_mutex, NULL);
-	pthread_mutex_init(&state.over_mutex, NULL);
-	i = 0;
-	while (i < args->number_of_coders)
-	{
-		dongles[i].index = i;
-		pthread_mutex_init(&dongles[i].lock, NULL);
-		dongles[i].last_used = state.start - args->dongle_cooldown;
-		i++;
-	}
-	i = 0;
-	while (i < args->number_of_coders)
-	{
-		coders[i].coder_id = i + 1;
-		coders[i].compiles_done = 0;
-		coders[i].last_compile = state.start;
-		coders[i].left_dongle = &dongles[i];
-		coders[i].right_dongle = &dongles[(i + 1) % args->number_of_coders];
-		coders[i].state = &state;
-		pthread_create(&coders[i].thread, NULL, run, &coders[i]);
-		i++;
-	}
+	state = init_state(args);
+	state.dongles = init_dongles(args, &state);
+	state.coders = init_coders(args, &state);
+	if (!state.coders || !state.dongles)
+		return (cleanup(args, state.coders, state.dongles));
+	i = -1;
+	while (++i < args->number_of_coders)
+		pthread_create(&state.coders[i].thread, NULL, run, &state.coders[i]);
 	pthread_create(&state.monitor, NULL, monitor, &state);
-	i = 0;
-	while (i < args->number_of_coders)
-	{
-		pthread_join(coders[i].thread, NULL);
-		i++;
-	}
+	i = -1;
+	while (++i < args->number_of_coders)
+		pthread_join(state.coders[i].thread, NULL);
 	pthread_join(state.monitor, NULL);
-	cleanup(args, coders, dongles);
+	cleanup(args, state.coders, state.dongles);
 }
