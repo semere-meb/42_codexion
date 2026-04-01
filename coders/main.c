@@ -129,6 +129,7 @@ void	*monitor(void *param)
 		{
 			pthread_mutex_lock(&state->coders[i].info_mutex);
 			last = state->coders[i].last_compile;
+			compiles_done = state->coders[i].compiles_done;
 			pthread_mutex_unlock(&state->coders[i].info_mutex);
 			if (now() - last >= state->args.time_to_burnout)
 			{
@@ -139,9 +140,6 @@ void	*monitor(void *param)
 				return (NULL);
 			}
 		}
-		pthread_mutex_lock(&state->coders[i - 1].info_mutex);
-		compiles_done = state->coders[i - 1].compiles_done;
-		pthread_mutex_unlock(&state->coders[i - 1].info_mutex);
 	}
 	return (NULL);
 }

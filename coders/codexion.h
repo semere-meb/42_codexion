@@ -66,4 +66,21 @@ typedef struct s_state
 
 t_args					*parse_arguments(int count, char **args);
 
+// heap.c
+# ifndef HEAP_SIZE
+#  define HEAP_SIZE 25
+# endif
+
+typedef struct s_minheap
+{
+	int					length;
+	void				*array[HEAP_SIZE];
+	int					(*cmp)(void *, void *);
+}						t_minheap;
+
+t_minheap				*init_heap(int (*cmp)(void *, void *));
+void					*peek(t_minheap *heap);
+void					enqueue(t_minheap *heap, void *val);
+void					*dequeue(t_minheap *heap);
+
 #endif

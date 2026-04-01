@@ -6,18 +6,8 @@ INCLUDES = coders/codexion.h
 OBJS = $(SRCS:.c=.o)
 
 CC = cc
-# CFLAGS = -Wall -Wextra -Werror -pthread -g
 CFLAGS = -Wall -Wextra -Werror -pthread -g -fsanitize=thread
-ARGS = 2 800 200 100 10 3 0 edf
-
-all: $(NAME)
-
-$(NAME): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
+# CFLAGS = -Wall -Wextra -Werror 
 # number_of_coders
 # time_to_burnout
 # time_to_compile
@@ -26,6 +16,15 @@ $(NAME): $(OBJS)
 # number_of_compiles_required
 # dongle_cooldown
 # scheduler
+ARGS = 4 800 200 100 10 3 0 edf
+
+all: $(NAME)
+
+$(NAME): $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 test: $(NAME)
 	./$(NAME) $(ARGS)
