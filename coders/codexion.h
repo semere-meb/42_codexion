@@ -12,14 +12,24 @@
 
 #ifndef CODEXION_H
 # define CODEXION_H
+
 # include <pthread.h>
 # include <stdbool.h>
 # include <sys/time.h>
+# include <unistd.h>
+
+# ifndef HEAP_SIZE
+#  define HEAP_SIZE 2
+# endif
 
 typedef struct s_state	t_state;
-typedef struct s_args	t_args;
-typedef struct s_dongle	t_dongle;
-typedef struct s_coder	t_coder;
+
+typedef struct s_minheap
+{
+	int					length;
+	void				*array[HEAP_SIZE];
+	int					(*cmp)(void *, void *);
+}						t_minheap;
 
 typedef struct s_args
 {
@@ -28,7 +38,7 @@ typedef struct s_args
 	int					time_to_compile;
 	int					time_to_debug;
 	int					time_to_refactor;
-	int					number_of_compiles_required;
+	int					compiles_todo;
 	int					dongle_cooldown;
 	char				*scheduler;
 }						t_args;
@@ -36,8 +46,10 @@ typedef struct s_args
 typedef struct s_dongle
 {
 	int					idx;
-	pthread_mutex_t		lock;
 	long				last_used;
+	t_minheap			*heap;
+	pthread_mutex_t		condmutex;
+	pthread_cond_t		cond;
 }						t_dongle;
 
 typedef struct s_coder
@@ -64,23 +76,44 @@ typedef struct s_state
 	pthread_t			monitor;
 }						t_state;
 
+typedef struct s_entry
+{
+	t_coder				*coder;
+	long				queued_at;
+	long				deadline;
+}						t_entry;
+
+// utils.c
+typedef struct s_state	t_state;
 t_args					*parse_arguments(int count, char **args);
+long					now(void);
+void					print(char *str, t_state *state, int coder_idx);
+
+// initialization.c
+t_state					init_state(t_args *args);
+t_dongle				*init_dongles(t_args *args, t_state *state);
+t_coder					*init_coders(t_args *args, t_state *state);
+t_minheap				*init_heap(int (*cmp)(void *, void *));
 
 // heap.c
-# ifndef HEAP_SIZE
-#  define HEAP_SIZE 25
-# endif
-
-typedef struct s_minheap
-{
-	int					length;
-	void				*array[HEAP_SIZE];
-	int					(*cmp)(void *, void *);
-}						t_minheap;
-
-t_minheap				*init_heap(int (*cmp)(void *, void *));
 void					*peek(t_minheap *heap);
 void					enqueue(t_minheap *heap, void *val);
 void					*dequeue(t_minheap *heap);
+
+// coder.c
+void					*coder_routine(void *param);
+
+// monitor.c
+bool					is_over(t_state *state);
+void					*monitor_routine(void *param);
+
+// schedulers.c
+int						fifo(void *t1, void *t2);
+int						edf(void *t1, void *t2);
+
+// main.c
+int						cleanup(t_args *args, t_coder *coders,
+							t_dongle *dongles);
+int						main(int argc, char **argv);
 
 #endif

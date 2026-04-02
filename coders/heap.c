@@ -1,6 +1,16 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   heap.c                                             :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: semebrah <semebrah@student.42berlin.de>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/03/22 18:07:14 by semebrah          #+#    #+#             */
+/*   Updated: 2026/03/22 18:07:31 by semebrah         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "codexion.h"
-#include <stdbool.h>
-#include <stdlib.h>
 
 static void	sift_up(t_minheap *heap, int i, int (*cmp)(void *, void *))
 {
@@ -47,18 +57,6 @@ static void	sift_down(t_minheap *heap, int i, int (*cmp)(void *, void *))
 		heap->array[i] = temp;
 		i = smallest;
 	}
-}
-
-t_minheap	*init_heap(int (*cmp)(void *, void *))
-{
-	t_minheap	*heap;
-
-	heap = malloc(sizeof(t_minheap));
-	if (!heap)
-		return (NULL);
-	heap->length = 0;
-	heap->cmp = cmp;
-	return (heap);
 }
 
 void	*peek(t_minheap *heap)

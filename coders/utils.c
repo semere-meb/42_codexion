@@ -5,18 +5,17 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: semebrah <semebrah@student.42berlin.de>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/03/22 18:07:24 by semebrah          #+#    #+#             */
+/*   Created: 2026/03/22 18:07:14 by semebrah          #+#    #+#             */
 /*   Updated: 2026/03/22 18:07:31 by semebrah         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-int	isnumeric(char *str)
+static int	isnumeric(char *str)
 {
 	size_t	i;
 
@@ -42,7 +41,7 @@ t_args	*parse_arguments(int count, char **args)
 	while (++i < 7)
 	{
 		if (!isnumeric(args[i]))
-			return (NULL);
+			return (free(data), NULL);
 		args_int[i] = atoi(args[i]);
 	}
 	data->scheduler = args[7];
@@ -51,7 +50,30 @@ t_args	*parse_arguments(int count, char **args)
 	data->time_to_compile = args_int[2];
 	data->time_to_debug = args_int[3];
 	data->time_to_refactor = args_int[4];
-	data->number_of_compiles_required = args_int[5];
+	data->compiles_todo = args_int[5];
 	data->dongle_cooldown = args_int[6];
 	return (data);
+}
+
+long	now(void)
+{
+	struct timeval	current;
+
+	gettimeofday(&current, NULL);
+	return (current.tv_sec * 1000L + current.tv_usec / 1000);
+}
+
+void	print(char *str, t_state *state, int coder_idx)
+{
+	bool	is_over;
+
+	pthread_mutex_lock(&state->over_mutex);
+	is_over = state->is_over;
+	pthread_mutex_unlock(&state->over_mutex);
+	if (!is_over)
+	{
+		pthread_mutex_lock(&state->print_mutex);
+		printf(str, now() - state->start, coder_idx);
+		pthread_mutex_unlock(&state->print_mutex);
+	}
 }
