@@ -34,24 +34,23 @@ void	*monitor_routine(void *param)
 {
 	t_state	*state;
 	int		i;
+	long	last;
 	int		done_coders;
-	t_args	args;
 
 	state = param;
-	args = state->args;
 	done_coders = 0;
-	while (done_coders < args.number_of_coders && !is_over(state))
+	while (done_coders < state->args.number_of_coders && !is_over(state))
 	{
 		done_coders = 0;
 		i = -1;
 		while (++i < state->args.number_of_coders)
 		{
 			pthread_mutex_lock(&state->coders[i].info_mutex);
-			if (state->coders[i].compiles_done == args.compiles_todo)
+			last = state->coders[i].last_compile;
+			if (state->coders[i].compiles_done == state->args.compiles_todo)
 				done_coders++;
 			pthread_mutex_unlock(&state->coders[i].info_mutex);
-			if (now()
-				- state->coders[i].last_compile >= state->args.time_to_burnout)
+			if (now() - last >= state->args.time_to_burnout)
 				return (stop_prog(state, i), NULL);
 		}
 		usleep(1000);
