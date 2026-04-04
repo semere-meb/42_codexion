@@ -7,9 +7,9 @@ OBJS = $(SRCS:.c=.o)
 
 CC = cc
 # CFLAGS = -Wall -Wextra -Werror -pthread -g -fsanitize=thread
-CFLAGS = -Wall -Wextra -Werror
+CFLAGS = -Wall -Wextra -Werror -pthread 
 
-ARGS = 4 800 200 100 10 3 0 fifo
+ARGS = 6 900 200 200 200 10 60 fifo
 
 all: $(NAME)
 

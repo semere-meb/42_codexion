@@ -73,7 +73,7 @@ void	print(char *str, t_state *state, int coder_idx)
 	if (!is_over)
 	{
 		pthread_mutex_lock(&state->print_mutex);
-		printf(str, now() - state->start, coder_idx);
+		printf(str, now() - state->start, coder_idx + 1);
 		pthread_mutex_unlock(&state->print_mutex);
 	}
 }

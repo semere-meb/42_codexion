@@ -53,7 +53,7 @@ static void	compile_op(t_coder *coder, t_state *state)
 	t_dongle	*first;
 	t_dongle	*second;
 
-	if (coder->right_dongle->idx < coder->left_dongle->idx)
+	if (coder->idx % 2 == 0)
 	{
 		first = coder->left_dongle;
 		second = coder->right_dongle;

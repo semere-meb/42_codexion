@@ -14,10 +14,10 @@
 
 static void	stop_prog(t_state *state, int i)
 {
+	print("%ld %d burned out\n", state, state->coders[i].idx);
 	pthread_mutex_lock(&state->over_mutex);
 	state->is_over = true;
 	pthread_mutex_unlock(&state->over_mutex);
-	print("%ld %d has burned out\n", state, state->coders[i].idx);
 }
 
 bool	is_over(t_state *state)
