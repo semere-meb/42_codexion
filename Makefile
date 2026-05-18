@@ -1,13 +1,20 @@
-NAME = codexion
+NAME := codexion
 
-SRCS = $(wildcard coders/*.c)
-INCLUDES = coders/codexion.h
+SRCS := coders/coder.c\
+	coders/heap.c\
+	coders/initialization.c\
+	coders/main.c\
+	coders/monitor.c\
+	coders/schedulers.c\
+	coders/utils.c
+
+INCLUDES := ./coders
 
 OBJS = $(SRCS:.c=.o)
 
 CC = cc
 # CFLAGS = -Wall -Wextra -Werror -pthread -g -fsanitize=thread
-CFLAGS = -Wall -Wextra -Werror -pthread 
+CFLAGS = -Wall -Wextra -Werror -pthread -I$(INCLUDES)
 
 ARGS = 6 900 200 200 200 10 60 fifo
 
